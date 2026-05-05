@@ -1,0 +1,23 @@
+#include 'actions/text'
+#include 'actions/web'
+
+#define color green
+#define glyph sendMessage
+#define mac false
+#define name OTP Notifications
+
+#question serverDetails "Fill-in server details" {
+    "host": "",
+    "port": 8429,
+    "scheme": "http"
+}
+
+const Matches = matchText('\d{4,}', ShortcutInput, false)
+
+const Dictionary = serverDetails
+
+jsonRequest("{Dictionary['scheme']}://{Dictionary['host']}:{Dictionary['port']}", "POST", {
+    "code": "{Matches}",
+    "content": "{ShortcutInput['Content']}",
+    "sender": "{ShortcutInput['Sender']}"
+})

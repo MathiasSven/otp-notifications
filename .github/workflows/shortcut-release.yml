@@ -1,0 +1,48 @@
+name: Publish Shortcut
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - '*.cherri'
+      - '**/*.cherri'
+
+concurrency:
+  group: shortcut-release
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - uses: DeterminateSystems/nix-installer-action@v22
+      - uses: DeterminateSystems/magic-nix-cache-action@v13
+
+      - name: Build
+        run: nix develop --command just compile -s
+
+      - name: Move latest tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -af latest "${GITHUB_SHA}" -m ""
+          git push --force origin refs/tags/latest
+
+      - name: Release
+        uses: softprops/action-gh-release@v3.0.0
+        with:
+          tag_name: latest
+          target_commitish: ${{ github.sha }}
+          name: Latest Shortcut
+          make_latest: true
+          overwrite_files: true
+          fail_on_unmatched_files: true
+          files: |
+            *.shortcut

@@ -1,0 +1,7 @@
+.direnv
+
+/result
+
+*.shortcut
+*.plist
+*_processed.cherri
