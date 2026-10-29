@@ -22,6 +22,7 @@
         gobject-introspection
         python3
         libnotify
+        wl-clipboard
         ;
     in
     {
@@ -53,6 +54,7 @@
 
           preFixup = ''
             makeWrapperArgs+=("''${gappsWrapperArgs[@]}")
+            makeWrapperArgs+=("--prefix" "PATH" ":" "${lib.makeBinPath [ wl-clipboard ]}")
           '';
 
           meta.mainProgram = "${finalAttrs.name}";
@@ -75,6 +77,7 @@
           curl
           qrencode
           just
+          wl-clipboard
 
           black
           isort

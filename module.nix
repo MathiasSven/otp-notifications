@@ -69,6 +69,7 @@ in
         NoNewPrivileges = true;
         ProtectSystem = "strict";
         RestrictSUIDSGID = true;
+        PrivateTmp = true;
       };
     };
   };

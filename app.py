@@ -4,6 +4,7 @@
 
 import logging
 import os
+import subprocess
 import threading
 
 import gi
@@ -12,21 +13,20 @@ from fastapi import FastAPI, Response
 from pydantic import BaseModel
 
 gi.require_version("Notify", "0.7")
-gi.require_version("Gtk", "4.0")
 
-from gi.repository import Gtk  # required so display is available
-from gi.repository import Gdk, GLib, Notify
+# https://lazka.github.io/pgi-docs/Notify-0.7/classes/Notification.html
+from gi.repository import GLib, Notify
 
 logger = logging.getLogger("uvicorn.error")
 
 Notify.init("SMS OTP Messages")
-
 
 class OTPMessage(BaseModel):
     sender: str
     code: str
     content: str
 
+_active_notifications: set[Notify.Notification] = set()
 
 def mk_notification(message: OTPMessage) -> None:
     notification = Notify.Notification.new(
@@ -34,18 +34,25 @@ def mk_notification(message: OTPMessage) -> None:
         body=f"Received OTP: {message.code}",
         icon=None,
     )
+    notification.set_hint("transient", GLib.Variant("b", True))
     notification.set_timeout(10000)
+    _active_notifications.add(notification)
 
     def callback(*args, **kwargs):
-        _ = notification  # required closure to avoid GC
-        display = Gdk.Display.get_default()
-        assert display is not None, "Display is expected"
+        try:
+            subprocess.run(
+                ["wl-copy", "--sensitive", "--type", "text/plain"],
+                input=message.code,
+                text=True,
+                check=True,
+            )
+        except (OSError, subprocess.CalledProcessError):
+            logger.exception("Could not copy OTP to the Wayland clipboard")
+        else:
+            logger.debug("Copied OTP to the Wayland clipboard")
 
-        clipboard = display.get_clipboard()
-        clipboard.set(message.code)
-        logger.debug("Copied")
-
-    def closed_callback(*args):
+    def closed_callback(closed_notification):
+        _active_notifications.discard(closed_notification)
         logger.debug("Notification closed")
 
     notification.connect("closed", closed_callback)
